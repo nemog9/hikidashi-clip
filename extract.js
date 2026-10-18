@@ -99,7 +99,7 @@ function csvshelfExtract() {
 
   function collectImages() {
     // 初期アイコン・ロゴ・アバター・絵文字・追跡用の画像と思われる URL は、候補から外す。
-    const junkURL = /gravatar\.com|\/avatars?[\/._-]|[\/._-]avatars?[\/._-]|favicon|apple-touch-icon|\/logos?[\/._-]|[\/._-]logos?[\/._-]|sprite|placeholder|default[-_.]?(image|avatar|thumb|ogp|og)?\.|noimage|no[-_]image|no[-_]img|blank\.|spacer|pixel|1x1|emoji|emoticon|\/badge|[\/._-]icons?[\/._-]|dummy|transparent\.(gif|png)|loading\.(gif|svg|png)|s\.w\.org/i;
+    const junkURL = /gravatar\.com|\/avatars?[\/._-]|[\/._-]avatars?[\/._-]|favicon|apple-touch-icon|\/logos?[\/._-]|[\/._-]logos?[\/._-]|sprite|placeholder|default[-_.]?(image|avatar|thumb|ogp|og)?\.|noimage|no[-_]image|no[-_]img|blank\.|spacer|pixel|1x1|emoji|emoticon|\/badge|[\/._-]icons?[\/._-]|dummy|transparent\.(gif|png)|loading\.(gif|svg|png)|s\.w\.org|banners?[\/._-]|[\/._-]bn[_-]|campaign|\/ads?\/|adserver|doubleclick/i;
     const bad = (u) => !u || /^(data|blob):/i.test(u) || /\.svg(\?|$)/i.test(u) || junkURL.test(u);
     const seen = new Set();
     const list = [];
