@@ -1,5 +1,5 @@
 const $ = (id) => document.getElementById(id);
-const fields = ["title", "category", "creators", "note"];
+const fields = ["title", "category", "creators", "note", "thumbUrl"];
 let current = { url: "", thumbnailURL: "" };
 let seq = 0;
 
@@ -7,7 +7,7 @@ function currentWork() {
   return {
     title: $("title").value,
     url: current.url,
-    thumbnailURL: current.thumbnailURL,
+    thumbnailURL: $("thumbUrl").value.trim(),
     category: $("category").value,
     creators: $("creators").value.split(/[|｜]/),
     note: $("note").value,
@@ -63,6 +63,7 @@ async function load() {
     data = { url: tab.url, title: tab.title || "", thumbnailURL: "", creators: [], category: "", note: "" };
   }
   current = { url: data.url, thumbnailURL: data.thumbnailURL };
+  $("thumbUrl").value = data.thumbnailURL || "";
   $("title").value = data.title || tab.title || "";
   $("category").value = data.category || "";
   $("creators").value = (data.creators || []).join(" | ");
@@ -74,15 +75,21 @@ async function load() {
     img.onload = () => {
       // YouTube の maxresdefault がない動画は 120x90 の代替画像が返るので、hqdefault に切り替える。
       if (data.fallbackThumbnailURL && img.naturalWidth <= 120) {
-        current.thumbnailURL = data.fallbackThumbnailURL; img.src = data.fallbackThumbnailURL; render();
+        current.thumbnailURL = data.fallbackThumbnailURL; $("thumbUrl").value = data.fallbackThumbnailURL; img.src = data.fallbackThumbnailURL; render();
       } else img.hidden = false;
     };
-    img.onerror = () => { if (data.fallbackThumbnailURL && img.src !== data.fallbackThumbnailURL) { current.thumbnailURL = data.fallbackThumbnailURL; img.src = data.fallbackThumbnailURL; render(); } };
+    img.onerror = () => { if (data.fallbackThumbnailURL && img.src !== data.fallbackThumbnailURL) { current.thumbnailURL = data.fallbackThumbnailURL; $("thumbUrl").value = data.fallbackThumbnailURL; img.src = data.fallbackThumbnailURL; render(); } };
     img.referrerPolicy = "no-referrer";
     img.src = data.thumbnailURL;
   }
   await render();
 }
 
+$("thumbUrl").addEventListener("input", () => {
+  const url = $("thumbUrl").value.trim();
+  const img = $("thumb");
+  img.hidden = true;
+  if (/^https?:/.test(url)) { img.onload = () => { img.hidden = false; }; img.onerror = () => { img.hidden = true; }; img.src = url; }
+});
 fields.forEach((id) => $(id).addEventListener("input", render));
 load();

@@ -59,10 +59,22 @@ function csvshelfExtract() {
   if (/^(x|twitter)\.com$/.test(host) && post) {
     out.source = "x";
     out.url = `https://x.com/${post[1]}/status/${post[2]}`;
-    const article = document.querySelector('article[data-testid="tweet"]') || document.querySelector("article");
+    // 表示中の投稿（URL の投稿 ID に一致するもの）の article を探す。スレッドや返信、引用があっても、別の投稿の画像を拾わない。
+    const articles = [...document.querySelectorAll("article")];
+    const article = articles.find((a) => a.querySelector(`a[href*="/status/${post[2]}"] time`))
+      || document.querySelector('article[data-testid="tweet"]') || articles[0];
     const text = article?.querySelector('[data-testid="tweetText"]')?.innerText?.trim() || "";
     const name = article?.querySelector('[data-testid="User-Name"] span')?.textContent?.trim() || post[1];
-    const photo = article?.querySelector('[data-testid="tweetPhoto"] img')?.src || "";
+    // 引用された投稿（article の中の別のカード）の画像は除く。
+    const inQuote = (el) => !!el.closest('[role="link"][tabindex="0"]') && !el.closest('[data-testid="tweetPhoto"]');
+    const candidates = article ? [
+      ...article.querySelectorAll('[data-testid="tweetPhoto"] img'),
+      ...article.querySelectorAll('img[src*="pbs.twimg.com/media/"]'),
+      ...article.querySelectorAll('img[src*="pbs.twimg.com/ext_tw_video_thumb"], img[src*="pbs.twimg.com/amplify_video_thumb"], img[src*="pbs.twimg.com/tweet_video_thumb"]'),
+      ...article.querySelectorAll('[data-testid="card.layoutLarge.media"] img, [data-testid="card.layoutSmall.media"] img'),
+    ].filter((el) => el.src && !inQuote(el)) : [];
+    const poster = article?.querySelector("video[poster]")?.getAttribute("poster") || "";
+    const photo = candidates[0]?.src || poster || "";
     out.creators = [name];
     out.category = "X";
     out.note = selection || text;
