@@ -117,8 +117,12 @@ function csvshelfExtract() {
     add(meta("thumbnail", "image"));
     // 3. JSON-LD の記事・商品などの画像。author / publisher / logo の中は見ない（人やサイトのアイコンになるため）。
     for (const u of jsonLdImages()) add(u);
-    // 4. 本文中の大きな画像（面積と位置で点数づけ）
+    // 4. 動画の poster（表示されている大きい動画。背景用の無音・自動再生・ループの動画は除く）
+    for (const u of videoPosters()) add(u);
+    // 5. 本文中の大きな画像（面積と位置で点数づけ）
     for (const u of bodyImages()) add(u);
+    // 6. CSS の背景画像として貼られた大きな要素（カード、ヒーロー画像）
+    for (const u of backgroundImages()) add(u);
     return list.slice(0, 8);
   }
 
@@ -144,6 +148,41 @@ function csvshelfExtract() {
       try { walk(JSON.parse(el.textContent), 0); } catch { /* 壊れた JSON は無視 */ }
     }
     return urls;
+  }
+
+  function videoPosters() {
+    const scored = [];
+    for (const v of document.querySelectorAll("video")) {
+      const poster = v.getAttribute("poster") || "";
+      if (!poster || v.closest('aside, [class*="advert" i], [class*="banner" i], [id*="ad-" i]')) continue;
+      if (v.autoplay && v.muted && v.loop) continue;                       // 装飾用の背景動画
+      const rect = v.getBoundingClientRect();
+      if (rect.width < 200 || rect.height < 120) continue;                 // 見えない、または小さすぎる
+      scored.push([rect.width * rect.height, poster]);
+    }
+    return scored.sort((a, b) => b[0] - a[0]).map(([, u]) => u);
+  }
+
+  function backgroundImages() {
+    const scored = [];
+    const skipBox = 'header, footer, nav, aside, [class*="avatar" i], [class*="comment" i], [class*="sidebar" i], [class*="advert" i], [class*="profile" i], [class*="author" i]';
+    // 全要素を調べると重いので、表示領域の大きい要素だけを、数を絞って見る。
+    const nodes = document.querySelectorAll("main *, article *, section *, div, a, figure, li");
+    let checked = 0;
+    for (const el of nodes) {
+      if (++checked > 1500) break;
+      const rect = el.getBoundingClientRect();
+      if (rect.width < 200 || rect.height < 120) continue;
+      const bg = getComputedStyle(el).backgroundImage;
+      if (!bg || bg === "none") continue;
+      const m = bg.match(/url\(["']?([^"')]+)["']?\)/);
+      if (!m || el.closest(skipBox)) continue;
+      const ratio = rect.width / rect.height;
+      if (ratio > 3.5 || ratio < 0.28) continue;
+      const top = rect.top + (window.scrollY || 0);
+      scored.push([Math.min(rect.width * rect.height, 1.2e6) * (1 + 1 / (1 + Math.max(0, top) / 800)), m[1]]);
+    }
+    return scored.sort((a, b) => b[0] - a[0]).map(([, u]) => u);
   }
 
   function bodyImages() {
