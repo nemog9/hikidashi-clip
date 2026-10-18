@@ -85,12 +85,93 @@ function csvshelfExtract() {
 
   // 一般のページ
   out.title = meta("og:title", "twitter:title") || document.title.trim();
-  out.thumbnailURL = abs(meta("og:image:secure_url", "og:image", "twitter:image", "twitter:image:src"));
-  if (out.thumbnailURL.startsWith("http:")) out.thumbnailURL = "https:" + out.thumbnailURL.slice(5);
+  const images = collectImages();
+  out.thumbnailURL = images[0] || "";
+  out.imageCandidates = images;
   const author = meta("author", "article:author", "twitter:creator");
   if (author && !/^https?:/.test(author)) out.creators = [author.replace(/^@/, "")];
   const canonical = document.querySelector('link[rel="canonical"]')?.href;
   if (canonical && new URL(canonical).host === location.host) out.url = strip(canonical);
   out.note = selection || meta("og:description", "twitter:description", "description");
   return out;
+
+  // ---- 画像の候補集め（先頭が自動選択。popup で別の候補を選べる） ----
+
+  function collectImages() {
+    // 初期アイコン・ロゴ・アバター・絵文字・追跡用の画像と思われる URL は、候補から外す。
+    const junkURL = /gravatar\.com|\/avatars?[\/._-]|[\/._-]avatars?[\/._-]|favicon|apple-touch-icon|\/logos?[\/._-]|[\/._-]logos?[\/._-]|sprite|placeholder|default[-_.]?(image|avatar|thumb|ogp|og)?\.|noimage|no[-_]image|no[-_]img|blank\.|spacer|pixel|1x1|emoji|emoticon|\/badge|[\/._-]icons?[\/._-]|dummy|transparent\.(gif|png)|loading\.(gif|svg|png)|s\.w\.org/i;
+    const bad = (u) => !u || /^(data|blob):/i.test(u) || /\.svg(\?|$)/i.test(u) || junkURL.test(u);
+    const seen = new Set();
+    const list = [];
+    const add = (u) => {
+      const url = abs(u);
+      if (!/^https?:/.test(url) || bad(url) || seen.has(url)) return;
+      seen.add(url);
+      list.push(url.startsWith("http:") ? "https:" + url.slice(5) : url);
+    };
+
+    // 1. 明示的に指定された画像（SNS 共有用のメタタグ）。サイトの初期アイコンなら外れる。
+    for (const n of ["og:image:secure_url", "og:image", "twitter:image", "twitter:image:src"]) add(meta(n));
+    // 2. その他のメタ情報
+    add(document.querySelector('link[rel="image_src"]')?.getAttribute("href"));
+    add(meta("thumbnail", "image"));
+    // 3. JSON-LD の記事・商品などの画像。author / publisher / logo の中は見ない（人やサイトのアイコンになるため）。
+    for (const u of jsonLdImages()) add(u);
+    // 4. 本文中の大きな画像（面積と位置で点数づけ）
+    for (const u of bodyImages()) add(u);
+    return list.slice(0, 8);
+  }
+
+  function jsonLdImages() {
+    const urls = [];
+    const skip = new Set(["author", "creator", "publisher", "logo", "brand", "provider", "sourceOrganization", "copyrightHolder", "mainEntityOfPage", "isPartOf", "breadcrumb", "potentialAction", "review", "comment"]);
+    const imageOf = (v) => {
+      if (!v) return;
+      if (typeof v === "string") urls.push(v);
+      else if (Array.isArray(v)) v.forEach(imageOf);
+      else if (typeof v === "object") imageOf(v.url || v.contentUrl);
+    };
+    const walk = (node, depth) => {
+      if (!node || typeof node !== "object" || depth > 4) return;
+      if (Array.isArray(node)) { node.forEach((n) => walk(n, depth + 1)); return; }
+      const type = [].concat(node["@type"] || []).join(",");
+      if (/Article|Posting|Product|Recipe|VideoObject|Book|Movie|CreativeWork|WebPage|Event|ImageObject/i.test(type) && !/Person|Organization/i.test(type)) {
+        imageOf(node.image); imageOf(node.thumbnailUrl); imageOf(node.thumbnail);
+      }
+      for (const [k, v] of Object.entries(node)) if (!skip.has(k) && typeof v === "object") walk(v, depth + 1);
+    };
+    for (const el of document.querySelectorAll('script[type="application/ld+json"]')) {
+      try { walk(JSON.parse(el.textContent), 0); } catch { /* 壊れた JSON は無視 */ }
+    }
+    return urls;
+  }
+
+  function bodyImages() {
+    const skipBox = 'header, footer, nav, aside, [role="banner"], [role="navigation"], [role="complementary"], [class*="avatar" i], [class*="comment" i], [id*="comment" i], [class*="sidebar" i], [class*="related" i], [class*="widget" i], [class*="advert" i], [class*="banner" i], [class*="profile" i], [class*="author" i]';
+    const mainEl = document.querySelector("article, main, [role='main']");
+    const scored = [];
+    for (const img of document.images) {
+      let src = img.currentSrc || img.src || img.getAttribute("data-src") || img.getAttribute("data-original") || img.getAttribute("data-lazy-src") || "";
+      const srcset = img.getAttribute("srcset") || img.getAttribute("data-srcset");
+      if (srcset) {
+        // srcset の中で一番大きいものを使う
+        const best = srcset.split(",").map((p) => p.trim().split(/\s+/)).map(([u, d]) => [u, parseFloat(d) || 1]).sort((a, b) => b[1] - a[1])[0];
+        if (best && best[0] && !src) src = best[0];
+      }
+      if (!src || img.closest(skipBox)) continue;
+      const rect = img.getBoundingClientRect();
+      const w = Math.max(img.naturalWidth || 0, rect.width, +img.getAttribute("width") || 0);
+      const h = Math.max(img.naturalHeight || 0, rect.height, +img.getAttribute("height") || 0);
+      if (Math.min(w, h) < 150 || Math.max(w, h) < 200) continue;   // アイコンや 1px 画像
+      const ratio = w / h;
+      if (ratio > 3.5 || ratio < 0.28) continue;                      // 帯状のバナー、細い装飾
+      const radius = parseFloat(getComputedStyle(img).borderTopLeftRadius) || 0;
+      if (radius >= Math.min(rect.width, rect.height) * 0.4 && rect.width > 0) continue;   // 丸いアバター
+      const inMain = mainEl && mainEl.contains(img);
+      const top = rect.top + (window.scrollY || 0);
+      const score = Math.min(w * h, 1.2e6) * (inMain ? 2 : 1) * (1 + 1 / (1 + Math.max(0, top) / 800));
+      scored.push([score, src]);
+    }
+    return scored.sort((a, b) => b[0] - a[0]).map(([, u]) => u);
+  }
 }

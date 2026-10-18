@@ -64,6 +64,7 @@ async function load() {
   }
   current = { url: data.url, thumbnailURL: data.thumbnailURL };
   $("thumbUrl").value = data.thumbnailURL || "";
+  renderCandidates(data.imageCandidates || []);
   $("title").value = data.title || tab.title || "";
   $("category").value = data.category || "";
   $("creators").value = (data.creators || []).join(" | ");
@@ -85,7 +86,29 @@ async function load() {
   await render();
 }
 
+function renderCandidates(list) {
+  const box = $("cands"), wrap = $("candList");
+  wrap.textContent = "";
+  box.hidden = !list || list.length === 0 || (list.length === 1 && $("thumbUrl").value.trim() === list[0]);
+  for (const url of list || []) {
+    const b = document.createElement("button");
+    b.type = "button"; b.dataset.url = url; b.title = url;
+    const i = document.createElement("img");
+    i.referrerPolicy = "no-referrer"; i.alt = ""; i.src = url;
+    i.onerror = () => b.remove();   // 読み込めない画像は候補から外す
+    b.append(i);
+    b.addEventListener("click", () => { $("thumbUrl").value = url; $("thumbUrl").dispatchEvent(new Event("input")); });
+    wrap.append(b);
+  }
+  markSelected();
+}
+function markSelected() {
+  const cur = $("thumbUrl").value.trim();
+  for (const b of $("candList").children) b.classList.toggle("on", b.dataset.url === cur);
+}
+
 $("thumbUrl").addEventListener("input", () => {
+  markSelected();
   const url = $("thumbUrl").value.trim();
   const img = $("thumb");
   img.hidden = true;
