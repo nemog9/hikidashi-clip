@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hikidashi クリップ</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main>
+    <div id="qrBox"><canvas id="qr" width="256" height="256"></canvas></div>
+    <p id="hint">iPhone のカメラで読み取ると、Hikidashi で追加できます。</p>
+    <p id="warn" hidden></p>
+    <img id="thumb" alt="" hidden>
+    <label>タイトル<input id="title" type="text"></label>
+    <label>カテゴリ<input id="category" type="text" placeholder="例: YouTube、記事"></label>
+    <label>クリエイター（| 区切りで複数）<input id="creators" type="text"></label>
+    <label>メモ（先頭 300 文字まで QR に入ります）<textarea id="note" rows="4"></textarea></label>
+    <small id="url"></small>
+    <small id="status"></small>
+  </main>
+  <script src="vendor/qrcode.js"></script>
+  <script src="share.js"></script>
+  <script src="extract.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
