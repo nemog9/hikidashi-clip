@@ -94,7 +94,7 @@ function csvshelfExtract() {
   if (canonical && new URL(canonical).host === location.host) out.url = strip(canonical);
   out.note = selection || meta("og:description", "twitter:description", "description");
 
-  // pixiv の作品ページ: カテゴリを pixiv にし、投稿者をクリエイターにする（詳しい取得は、popup が csvshelfPixivInfo で行う）。
+  // pixiv の作品ページ: カテゴリを pixiv にし、投稿者をクリエイターにする（共有用に公開されているページの題名だけを使う）。
   const pixiv = location.pathname.match(/^\/(?:[a-z]{2}(?:-[a-z]+)?\/)?artworks\/(\d+)/i);
   if (/(^|\.)pixiv\.net$/.test(host) && pixiv) {
     out.source = "pixiv";
@@ -104,7 +104,11 @@ function csvshelfExtract() {
     // 「#タグ 作品名 - 投稿者のイラスト - pixiv」。画面遷移（SPA）でも更新される document.title を先に見る。
     for (const t of [document.title, meta("og:title")]) {
       const m = (t || "").match(/^(.*?)\s+-\s+(.+?)の(?:イラスト|マンガ|小説|うごイラ|作品)\s+-\s+pixiv$/s);
-      if (m) { out.creators = [m[2].trim()]; if (m[1].trim()) out.title = m[1].trim(); break; }
+      if (m) { out.creators = [m[2].trim()]; let title = m[1].trim();
+        while (/^#/.test(title) && /\s/.test(title)) title = title.replace(/^#\S+\s+/, "").trim();   // 先頭の「#タグ」は作品名ではない
+        if (title) out.title = title;
+        break;
+      }
     }
   }
   return out;
@@ -227,23 +231,4 @@ function csvshelfExtract() {
     }
     return scored.sort((a, b) => b[0] - a[0]).map(([, u]) => u);
   }
-}
-
-// pixiv の作品情報（作品名・投稿者名）を、ログイン中のページから、公開の JSON で取る。R-18 など、ログインが必要な作品も、取れる。
-// popup が、csvshelfExtract のあとに、同じタブで、もう一度、実行する。
-async function csvshelfPixivInfo(id) {
-  try {
-    const res = await fetch(`/ajax/illust/${id}`, { credentials: "include", headers: { Accept: "application/json" } });
-    if (!res.ok) return { debug: `作品情報 HTTP ${res.status}` };
-    const j = await res.json();
-    if (j.error || !j.body || !j.body.userName) return { debug: `作品情報 error=${!!j.error} ${String(j.message || "").slice(0, 40)}` };
-    // 画像の URL は、ログイン中は R-18 の作品でも入っている（ログインしていない、または R-18 表示がオフだと null）。
-    // i.pximg.net は、参照元（Referer）が pixiv でないと拒否される。
-    const u = j.body.urls || {};
-    const image = u.regular || u.small || u.thumb || "";
-    return {
-      title: j.body.illustTitle || j.body.title || "", userName: j.body.userName, image,
-      debug: `作品情報 HTTP 200 / 画像URL=${image ? "あり" : "なし"} / xRestrict=${j.body.xRestrict}`,
-    };
-  } catch (e) { return { debug: `作品情報 例外 ${String(e).slice(0, 60)}` }; }
 }
