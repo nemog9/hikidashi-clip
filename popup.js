@@ -65,7 +65,7 @@ async function load() {
   if (data.source === "pixiv" && data.pixivId) {
     try {
       const [r] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: csvshelfPixivInfo, args: [data.pixivId] });
-      if (r && r.result) {
+      if (r && r.result && r.result.userName) {
         data.creators = [r.result.userName]; if (r.result.title) data.title = r.result.title;
         // ログイン中の作品情報に、画像の URL があれば、それを優先する（R-18 では、ページの OGP が pixiv のロゴになるため）。
         if (r.result.image) { data.thumbnailURL = r.result.image; data.imageCandidates = [r.result.image, ...(data.imageCandidates || [])].slice(0, 8); }

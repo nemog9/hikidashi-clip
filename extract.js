@@ -234,11 +234,16 @@ function csvshelfExtract() {
 async function csvshelfPixivInfo(id) {
   try {
     const res = await fetch(`/ajax/illust/${id}`, { credentials: "include", headers: { Accept: "application/json" } });
-    if (!res.ok) return null;
+    if (!res.ok) return { debug: `作品情報 HTTP ${res.status}` };
     const j = await res.json();
-    if (j.error || !j.body || !j.body.userName) return null;
-    // 画像の URL は、ログイン中は R-18 の作品でも入っている（ログインしていないと null）。i.pximg.net は、参照元（Referer）が pixiv でないと拒否される。
+    if (j.error || !j.body || !j.body.userName) return { debug: `作品情報 error=${!!j.error} ${String(j.message || "").slice(0, 40)}` };
+    // 画像の URL は、ログイン中は R-18 の作品でも入っている（ログインしていない、または R-18 表示がオフだと null）。
+    // i.pximg.net は、参照元（Referer）が pixiv でないと拒否される。
     const u = j.body.urls || {};
-    return { title: j.body.illustTitle || j.body.title || "", userName: j.body.userName, image: u.regular || u.small || u.thumb || "" };
-  } catch { return null; }
+    const image = u.regular || u.small || u.thumb || "";
+    return {
+      title: j.body.illustTitle || j.body.title || "", userName: j.body.userName, image,
+      debug: `作品情報 HTTP 200 / 画像URL=${image ? "あり" : "なし"} / xRestrict=${j.body.xRestrict}`,
+    };
+  } catch (e) { return { debug: `作品情報 例外 ${String(e).slice(0, 60)}` }; }
 }
