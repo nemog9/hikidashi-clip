@@ -76,7 +76,7 @@ def workflow(actions):
         "WFWorkflowClientRelease": "26.0",
         "WFWorkflowMinimumClientVersion": 900,
         "WFWorkflowMinimumClientVersionString": "900",
-        "WFWorkflowIcon": {"WFWorkflowIconStartColor": 4282601983, "WFWorkflowIconGlyphNumber": 59511},
+        "WFWorkflowIcon": {"WFWorkflowIconStartColor": 4271458815, "WFWorkflowIconGlyphNumber": 59511},
         "WFWorkflowImportQuestions": [],
         "WFWorkflowInputContentItemClasses": ["WFSafariWebPageContentItem", "WFURLContentItem"],
         "WFWorkflowTypes": ["ActionExtension"],
