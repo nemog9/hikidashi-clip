@@ -3,6 +3,7 @@
 PC で見ているページを QR コードにして、iPhone の [Hikidashi（引き出し）](https://nemog9.github.io/hikidashi-support/) に保存する Chrome 拡張機能です。サーバーもアカウントも要りません。QR の中に、作品の内容が入っています。
 
 > Hikidashi の作者が作った、PC 用のクリップ拡張です。
+> 📱 iPhone アプリ: [Hikidashi（引き出し）を App Store で入手](https://apps.apple.com/jp/app/hikidashi-%E5%BC%95%E3%81%8D%E5%87%BA%E3%81%97/id6823911890)（この拡張は、アプリとセットで使います）
 
 ## インストール
 Chrome ウェブストアでは配布していません。次の手順で、手元の Chrome に読み込みます（Edge など Chromium 系でも同様です）。

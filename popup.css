@@ -18,3 +18,6 @@ small { color: var(--sub); word-break: break-all; }
 #candList button { flex: 0 0 auto; width: 64px; height: 64px; padding: 0; border: 2px solid transparent; border-radius: 8px; background: color-mix(in srgb, var(--fg) 8%, transparent); cursor: pointer; overflow: hidden; }
 #candList button.on { border-color: var(--accent); }
 #candList img { width: 100%; height: 100%; object-fit: cover; display: block; }
+small.app { margin-top: 2px; }
+small.app a { color: var(--accent); text-decoration: none; }
+small.app a:hover { text-decoration: underline; }
