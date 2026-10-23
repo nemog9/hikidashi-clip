@@ -48,39 +48,56 @@ js = extract + r'''
 '''
 
 js_uuid = str(uuid.uuid4()).upper()
-workflow = {
-    "WFWorkflowClientVersion": "2900.0.1",
-    "WFWorkflowClientRelease": "26.0",
-    "WFWorkflowMinimumClientVersion": 900,
-    "WFWorkflowMinimumClientVersionString": "900",
-    "WFWorkflowIcon": {"WFWorkflowIconStartColor": 4282601983, "WFWorkflowIconGlyphNumber": 59511},
-    "WFWorkflowImportQuestions": [],
-    "WFWorkflowInputContentItemClasses": ["WFSafariWebPageContentItem", "WFURLContentItem"],
-    "WFWorkflowTypes": ["ActionExtension"],
-    "WFWorkflowActions": [
-        {
-            "WFWorkflowActionIdentifier": "is.workflow.actions.runjavascriptonwebpage",
-            "WFWorkflowActionParameters": {"UUID": js_uuid, "WFJavaScript": js},
-        },
-        {
-            "WFWorkflowActionIdentifier": "is.workflow.actions.openurl",
-            "WFWorkflowActionParameters": {
-                "WFInput": {
-                    "Value": {"OutputUUID": js_uuid, "OutputName": "JavaScript の結果", "Type": "ActionOutput"},
-                    "WFSerializationType": "WFTextTokenAttachment",
-                }
-            },
-        },
+url_uuid = str(uuid.uuid4()).upper()
+
+def attachment(uuid_, name):
+    """アクションの出力（マジック変数）だけを入れた、テキストの値。"""
+    return {
+        "Value": {"string": "\ufffc", "attachmentsByRange": {"{0, 1}": {"OutputUUID": uuid_, "OutputName": name, "Type": "ActionOutput"}}},
+        "WFSerializationType": "WFTextTokenString",
+    }
+
+run_js = {
+    "WFWorkflowActionIdentifier": "is.workflow.actions.runjavascriptonwebpage",
+    "WFWorkflowActionParameters": {"UUID": js_uuid, "WFJavaScript": js},
+}
+
+def workflow(actions):
+    return {
+        "WFWorkflowClientVersion": "2900.0.1",
+        "WFWorkflowClientRelease": "26.0",
+        "WFWorkflowMinimumClientVersion": 900,
+        "WFWorkflowMinimumClientVersionString": "900",
+        "WFWorkflowIcon": {"WFWorkflowIconStartColor": 4282601983, "WFWorkflowIconGlyphNumber": 59511},
+        "WFWorkflowImportQuestions": [],
+        "WFWorkflowInputContentItemClasses": ["WFSafariWebPageContentItem", "WFURLContentItem"],
+        "WFWorkflowTypes": ["ActionExtension"],
+        "WFWorkflowActions": actions,
+    }
+
+variants = {
+    # 本番: JavaScript の結果 →「URL」→「URL を開く」
+    "Hikidashi に保存": [
+        run_js,
+        {"WFWorkflowActionIdentifier": "is.workflow.actions.url",
+         "WFWorkflowActionParameters": {"UUID": url_uuid, "WFURLActionURL": attachment(js_uuid, "JavaScript の結果")}},
+        {"WFWorkflowActionIdentifier": "is.workflow.actions.openurl",
+         "WFWorkflowActionParameters": {"WFInput": {"Value": {"OutputUUID": url_uuid, "OutputName": "URL", "Type": "ActionOutput"}, "WFSerializationType": "WFTextTokenAttachment"}}},
+    ],
+    # 診断用: JavaScript の結果を、そのまま画面に出す（何が返っているかを見る）
+    "Hikidashi 診断": [
+        run_js,
+        {"WFWorkflowActionIdentifier": "is.workflow.actions.showresult",
+         "WFWorkflowActionParameters": {"Text": attachment(js_uuid, "JavaScript の結果")}},
     ],
 }
 
 out = pathlib.Path(__file__).resolve().parent
-unsigned = out / "Hikidashi.unsigned.shortcut"
-signed = out / "Hikidashi に保存.shortcut"
-with open(unsigned, "wb") as f:
-    plistlib.dump(workflow, f, fmt=plistlib.FMT_BINARY)
-print("unsigned:", unsigned, unsigned.stat().st_size, "bytes")
-r = subprocess.run(["shortcuts", "sign", "--mode", "anyone", "--input", str(unsigned), "--output", str(signed)], capture_output=True, text=True)
-print(r.returncode, r.stdout.strip(), r.stderr.strip()[:400])
-if r.returncode == 0:
-    print("signed:", signed, signed.stat().st_size, "bytes")
+for name, actions in variants.items():
+    unsigned = out / f"{name}.unsigned.shortcut"
+    signed = out / f"{name}.shortcut"
+    with open(unsigned, "wb") as f:
+        plistlib.dump(workflow(actions), f, fmt=plistlib.FMT_BINARY)
+    r = subprocess.run(["shortcuts", "sign", "--mode", "anyone", "--input", str(unsigned), "--output", str(signed)], capture_output=True, text=True)
+    print(name, "→", "署名 OK" if r.returncode == 0 else f"署名 失敗: {r.stderr.strip()[:200]}", signed.stat().st_size if signed.exists() else "")
+    unsigned.unlink()
