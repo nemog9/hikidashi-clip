@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Hikidashi クリップ",
-  "version": "1.6.2",
+  "version": "1.7.0",
   "description": "表示中のページを QR コードにして、iPhone の Hikidashi に保存します。",
   "action": {
     "default_title": "Hikidashi に保存（QR）",

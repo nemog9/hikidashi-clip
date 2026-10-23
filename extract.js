@@ -110,8 +110,34 @@ function csvshelfExtract() {
         break;
       }
     }
+    // タグ（ページに表示されているもの）をメモの先頭に「#タグ」で並べる。リンク先（/tags/<タグ名>/…）から、タグ名を取る。
+    const tags = pixivTags();
+    out.tags = tags;
+    out.debug = `タグ ${tags.length} 件`;
+    if (tags.length) out.note = tags.map((t) => "#" + t.replace(/\s+/g, "_")).join(" ") + (out.note ? "\n" + out.note : "");
   }
   return out;
+
+  // 作品のタイトルの後ろにある、最初のタグのリンクと、同じ一覧にあるタグだけを取る（ヘッダー・おすすめ・関連作品のものは拾わない）。
+  function pixivTags() {
+    const decode = (href) => {
+      const m = (href || "").match(/\/tags\/([^/?#]+)/);
+      if (!m) return "";
+      try { return decodeURIComponent(m[1]).trim(); } catch { return m[1]; }
+    };
+    const links = [...document.querySelectorAll('a[href*="/tags/"]')].filter((a) => decode(a.getAttribute("href")) && !a.closest("header, nav, aside"));
+    const h1 = document.querySelector("h1");
+    const after = h1 ? links.filter((a) => h1.compareDocumentPosition(a) & Node.DOCUMENT_POSITION_FOLLOWING) : links;
+    const first = after[0];
+    if (!first) return [];
+    const list = first.closest("ul") || first.parentElement;
+    const names = [];
+    for (const a of list.querySelectorAll('a[href*="/tags/"]')) {
+      const t = decode(a.getAttribute("href"));
+      if (t && !names.includes(t)) names.push(t);
+    }
+    return names.slice(0, 30);
+  }
 
   // ---- 画像の候補集め（先頭が自動選択。popup で別の候補を選べる） ----
 
