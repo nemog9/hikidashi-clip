@@ -113,7 +113,7 @@ function csvshelfExtract() {
 
   function collectImages() {
     // 初期アイコン・ロゴ・アバター・絵文字・追跡用の画像と思われる URL は、候補から外す。
-    const junkURL = /gravatar\.com|\/avatars?[\/._-]|[\/._-]avatars?[\/._-]|favicon|apple-touch-icon|\/logos?[\/._-]|[\/._-]logos?[\/._-]|sprite|placeholder|default[-_.]?(image|avatar|thumb|ogp|og)?\.|noimage|no[-_]image|no[-_]img|blank\.|spacer|pixel|1x1|emoji|emoticon|\/badge|[\/._-]icons?[\/._-]|dummy|transparent\.(gif|png)|loading\.(gif|svg|png)|s\.w\.org|banners?[\/._-]|[\/._-]bn[_-]|campaign|\/ads?\/|adserver|doubleclick/i;
+    const junkURL = /gravatar\.com|\/avatars?[\/._-]|[\/._-]avatars?[\/._-]|favicon|apple-touch-icon|\/logos?[\/._-]|[\/._-]logos?[\/._-]|sprite|placeholder|default[-_.]?(image|avatar|thumb|ogp|og)?\.|noimage|no[-_]image|no[-_]img|blank\.|spacer|pixel|1x1|emoji|emoticon|\/badge|[\/._-]icons?[\/._-]|dummy|transparent\.(gif|png)|loading\.(gif|svg|png)|s\.w\.org|pixiv_logo|s\.pximg\.net\/www\/images|banners?[\/._-]|[\/._-]bn[_-]|campaign|\/ads?\/|adserver|doubleclick/i;
     const bad = (u) => !u || /^(data|blob):/i.test(u) || /\.svg(\?|$)/i.test(u) || junkURL.test(u);
     const seen = new Set();
     const list = [];
@@ -237,6 +237,8 @@ async function csvshelfPixivInfo(id) {
     if (!res.ok) return null;
     const j = await res.json();
     if (j.error || !j.body || !j.body.userName) return null;
-    return { title: j.body.illustTitle || j.body.title || "", userName: j.body.userName };
+    // 画像の URL は、ログイン中は R-18 の作品でも入っている（ログインしていないと null）。i.pximg.net は、参照元（Referer）が pixiv でないと拒否される。
+    const u = j.body.urls || {};
+    return { title: j.body.illustTitle || j.body.title || "", userName: j.body.userName, image: u.regular || u.small || u.thumb || "" };
   } catch { return null; }
 }
