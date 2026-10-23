@@ -57,10 +57,18 @@ def attachment(uuid_, name):
         "WFSerializationType": "WFTextTokenString",
     }
 
-run_js = {
-    "WFWorkflowActionIdentifier": "is.workflow.actions.runjavascriptonwebpage",
-    "WFWorkflowActionParameters": {"UUID": js_uuid, "WFJavaScript": js},
-}
+# 入力は、明示的に「ショートカットの入力」（共有シートで渡された Safari の Web ページ）にする。
+shortcut_input = {"Value": {"Type": "ExtensionInput"}, "WFSerializationType": "WFTextTokenAttachment"}
+
+def run_js_action(code):
+    return {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.runjavascriptonwebpage",
+        "WFWorkflowActionParameters": {"UUID": js_uuid, "WFInput": shortcut_input, "WFJavaScript": code},
+    }
+
+run_js = run_js_action(js)
+# 診断用の、最小の JavaScript（動いているか、ページの題名と URL が取れるかだけを見る）
+min_js = 'completion("OK: " + document.title + " | " + location.href);'
 
 def workflow(actions):
     return {
@@ -84,7 +92,13 @@ variants = {
         {"WFWorkflowActionIdentifier": "is.workflow.actions.openurl",
          "WFWorkflowActionParameters": {"WFInput": {"Value": {"OutputUUID": url_uuid, "OutputName": "URL", "Type": "ActionOutput"}, "WFSerializationType": "WFTextTokenAttachment"}}},
     ],
-    # 診断用: JavaScript の結果を、そのまま画面に出す（何が返っているかを見る）
+    # 診断用 1: 最小の JavaScript の結果を画面に出す（ショートカットの JavaScript 実行そのものが動くか）
+    "Hikidashi 診断（最小）": [
+        run_js_action(min_js),
+        {"WFWorkflowActionIdentifier": "is.workflow.actions.showresult",
+         "WFWorkflowActionParameters": {"Text": attachment(js_uuid, "JavaScript の結果")}},
+    ],
+    # 診断用 2: 本番と同じ JavaScript の結果を、そのまま画面に出す
     "Hikidashi 診断": [
         run_js,
         {"WFWorkflowActionIdentifier": "is.workflow.actions.showresult",
