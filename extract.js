@@ -93,6 +93,20 @@ function csvshelfExtract() {
   const canonical = document.querySelector('link[rel="canonical"]')?.href;
   if (canonical && new URL(canonical).host === location.host) out.url = strip(canonical);
   out.note = selection || meta("og:description", "twitter:description", "description");
+
+  // pixiv の作品ページ: カテゴリを pixiv にし、投稿者をクリエイターにする（詳しい取得は、popup が csvshelfPixivInfo で行う）。
+  const pixiv = location.pathname.match(/^\/(?:[a-z]{2}(?:-[a-z]+)?\/)?artworks\/(\d+)/i);
+  if (/(^|\.)pixiv\.net$/.test(host) && pixiv) {
+    out.source = "pixiv";
+    out.pixivId = pixiv[1];
+    out.url = `https://www.pixiv.net/artworks/${pixiv[1]}`;
+    out.category = "pixiv";
+    // 「#タグ 作品名 - 投稿者のイラスト - pixiv」。画面遷移（SPA）でも更新される document.title を先に見る。
+    for (const t of [document.title, meta("og:title")]) {
+      const m = (t || "").match(/^(.*?)\s+-\s+(.+?)の(?:イラスト|マンガ|小説|うごイラ|作品)\s+-\s+pixiv$/s);
+      if (m) { out.creators = [m[2].trim()]; if (m[1].trim()) out.title = m[1].trim(); break; }
+    }
+  }
   return out;
 
   // ---- 画像の候補集め（先頭が自動選択。popup で別の候補を選べる） ----
@@ -213,4 +227,16 @@ function csvshelfExtract() {
     }
     return scored.sort((a, b) => b[0] - a[0]).map(([, u]) => u);
   }
+}
+
+// pixiv の作品情報（作品名・投稿者名）を、ログイン中のページから、公開の JSON で取る。R-18 など、ログインが必要な作品も、取れる。
+// popup が、csvshelfExtract のあとに、同じタブで、もう一度、実行する。
+async function csvshelfPixivInfo(id) {
+  try {
+    const res = await fetch(`/ajax/illust/${id}`, { credentials: "include", headers: { Accept: "application/json" } });
+    if (!res.ok) return null;
+    const j = await res.json();
+    if (j.error || !j.body || !j.body.userName) return null;
+    return { title: j.body.illustTitle || j.body.title || "", userName: j.body.userName };
+  } catch { return null; }
 }

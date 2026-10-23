@@ -62,6 +62,12 @@ async function load() {
     // chrome:// や Chrome ウェブストアなどは注入できない。URL とタイトルだけで続ける。
     data = { url: tab.url, title: tab.title || "", thumbnailURL: "", creators: [], category: "", note: "" };
   }
+  if (data.source === "pixiv" && data.pixivId) {
+    try {
+      const [r] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: csvshelfPixivInfo, args: [data.pixivId] });
+      if (r && r.result) { data.creators = [r.result.userName]; if (r.result.title) data.title = r.result.title; }
+    } catch { /* 取れなければ、ページの題名から読んだ値のまま */ }
+  }
   current = { url: data.url, thumbnailURL: data.thumbnailURL };
   $("thumbUrl").value = data.thumbnailURL || "";
   renderCandidates(data.imageCandidates || []);
