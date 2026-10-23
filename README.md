@@ -19,9 +19,10 @@ PC がなくても、iPhone の **Safari の共有ボタン**から、Chrome 拡
 > アプリの共有拡張機能（Save to Hikidashi）は、URL からページを取りに行くので、**pixiv のように、ブラウザの中で画面を組み立てるページ**では、タグなどが取れません。そのようなページは、こちらが向いています。
 
 **入れ方**
-1. [Releases](https://github.com/nemog9/hikidashi-clip/releases/latest) から `Hikidashi に保存.shortcut` をダウンロードして、iPhone に送る（AirDrop や、メッセージ、iCloud Drive など）。iPhone のブラウザで、直接ダウンロードしても構いません。
-2. ファイルを開いて、「**ショートカットを追加**」をタップする。
-3. 「設定」→「ショートカット」→「詳細」で、「**スクリプトの実行を許可**」を**オン**にする（JavaScript を使うショートカットに必要です）。
+1. iPhone で、次のリンクを開いて、「**ショートカットを追加**」をタップする。
+   **[Hikidashi に保存（iCloud リンク）](https://www.icloud.com/shortcuts/3feab5f321de4e95bbc9d09be8da001a)**
+   （リンクが使えないときは、[Releases](https://github.com/nemog9/hikidashi-clip/releases/latest) の `Hikidashi に保存.shortcut` をダウンロードして、開いても構いません。）
+2. 「設定」→「ショートカット」→「詳細」で、「**スクリプトの実行を許可**」を**オン**にする（JavaScript を使うショートカットに必要です）。
 
 **使い方**
 1. Safari で、保存したいページを開く。
