@@ -113,13 +113,32 @@ function csvshelfExtract() {
     // タグ（ページに表示されているもの）をメモの先頭に「#タグ」で並べる。リンク先（/tags/<タグ名>/…）から、タグ名を取る。
     const tags = pixivTags();
     out.tags = tags;
-    out.debug = `タグ ${tags.length} 件`;
+    out.debug = `タグ ${tags.length} 件 / display-tags=${document.querySelector(".display-tags") ? "あり" : "なし"}`;
     if (tags.length) out.note = tags.map((t) => "#" + t.replace(/\s+/g, "_")).join(" ") + (out.note ? "\n" + out.note : "");
   }
   return out;
 
   // 作品のタイトルの後ろにある、最初のタグのリンクと、同じ一覧にあるタグだけを取る（ヘッダー・おすすめ・関連作品のものは拾わない）。
   function pixivTags() {
+    // まず、タグの一覧の入れ物（class="display-tags v-tags"）を探す。見つかれば、その中のタグだけを取る。
+    const box = document.querySelector(".display-tags.v-tags, .display-tags");
+    if (box) {
+      const nameOf = (el) => {
+        const href = el.getAttribute("href") || "";
+        let m = href.match(/\/tags\/([^/?#]+)/);
+        if (!m) m = href.match(/[?&](?:word|tag)=([^&#]+)/);
+        if (m) { try { return decodeURIComponent(m[1].replace(/\+/g, " ")).trim(); } catch { return m[1]; } }
+        return (el.textContent || "").trim().replace(/^[#＃]+/, "");
+      };
+      const found = [];
+      const candidates = box.querySelectorAll("a, .tag, li");
+      for (const el of candidates) {
+        if (el.tagName !== "A" && el.querySelector("a")) continue;     // 入れ子（li の中の a など）は、a のほうだけを見る
+        const t = nameOf(el);
+        if (t && !found.includes(t)) found.push(t);
+      }
+      if (found.length) return found.slice(0, 30);
+    }
     const decode = (href) => {
       const m = (href || "").match(/\/tags\/([^/?#]+)/);
       if (!m) return "";
